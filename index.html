@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sampler</title>
+<meta name="theme-color" content="#0e0e11">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* Same palette as Theme in the native app (DeckView.swift). */
+  :root {
+    --background: #0e0e11;
+    --panel: #1a1a1d;
+    --key-face: #242429;
+    --live: #ff3b30;
+    --rounded: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+    --header-h: 54px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: linear-gradient(to bottom, var(--background), #000) fixed;
+    background-color: #000;
+    color: #fff;
+    font-family: var(--rounded);
+    overflow-x: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Header */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    height: var(--header-h);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px;
+    background: rgb(26 26 29 / 0.6);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgb(255 255 255 / 0.06);
+  }
+  .brand {
+    font-size: 15px; font-weight: 800; letter-spacing: 4px;
+    color: rgb(255 255 255 / 0.9); flex: none;
+  }
+  .badge {
+    display: flex; align-items: center; gap: 7px; min-width: 0;
+    padding: 5px 10px; border-radius: 999px;
+    background: rgb(255 255 255 / 0.05);
+    font-size: 11px; font-weight: 800; letter-spacing: 1px;
+    color: rgb(255 255 255 / 0.35);
+  }
+  .badge span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge::before {
+    content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%;
+    background: rgb(255 255 255 / 0.2);
+  }
+  .badge.live { background: rgb(255 59 48 / 0.18); color: #fff; }
+  .badge.live::before { background: var(--live); animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+  .spacer { flex: 1 1 12px; }
+  .legend { display: flex; gap: 10px; flex: none; }
+  .legend.hidden { display: none; }
+  .legend div {
+    display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    font-size: 11px; font-weight: 700; color: rgb(255 255 255 / 0.6);
+  }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--accent); }
+  .round {
+    flex: none; width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--panel); color: rgb(255 255 255 / 0.85);
+    border: 0; padding: 0; cursor: pointer;
+  }
+  .round:hover { color: #fff; }
+  .round svg { width: 15px; height: 15px; }
+
+  /* Deck */
+  #deck {
+    display: grid; justify-content: start;
+    padding: 16px;
+  }
+  .key {
+    position: relative; overflow: hidden;
+    width: var(--size); height: var(--size);
+    border-radius: calc(var(--size) * 0.11);
+    background: var(--key-face);
+    box-shadow: 0 3px 5px rgb(0 0 0 / 0.5);
+    cursor: pointer; touch-action: manipulation;
+    transition: transform 0.18s cubic-bezier(.3,1.5,.6,1), box-shadow 0.15s ease-out;
+  }
+  .key::after {   /* category border, drawn over the thumbnail */
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    border: var(--border) solid var(--accent);
+    opacity: 0.85;
+  }
+  .key:hover::after { opacity: 1; }
+  .key img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.6) saturate(0.9);
+    transition: filter 0.15s ease-out;
+    pointer-events: none;
+  }
+  .key:hover img { filter: brightness(0.72) saturate(0.9); }
+  .key .title {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: calc(var(--size) * 0.08);
+    padding-top: calc(var(--size) * 0.14);
+    text-align: center;
+    pointer-events: none;
+  }
+  .key .title span {
+    font-weight: 900; line-height: 1.02;
+    overflow-wrap: normal; word-break: keep-all; hyphens: none;
+    text-shadow: 0 0 calc(var(--size) * 0.03) rgb(0 0 0 / 0.9), 0 0 calc(var(--size) * 0.08) rgb(0 0 0 / 0.6);
+  }
+  .key .photo {
+    position: absolute; top: calc(var(--border) + 3px); right: calc(var(--border) + 3px);
+    width: calc(max(8px, var(--size) * 0.065) + 8px); height: calc(max(8px, var(--size) * 0.065) + 8px);
+    display: grid; place-items: center; border-radius: 50%;
+    background: rgb(0 0 0 / 0.55); color: rgb(255 255 255 / 0.85);
+  }
+  .key .photo svg { width: 62%; height: 62%; }
+  .key .progress {
+    position: absolute; left: calc(var(--border) + 4px); right: calc(var(--border) + 4px);
+    bottom: calc(var(--border) + 4px); height: max(3px, calc(var(--size) * 0.03));
+    border-radius: 999px; background: rgb(255 255 255 / 0.2); overflow: hidden;
+    display: none;
+  }
+  .key .progress i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; }
+  .key.pressed { transform: scale(0.93); }
+  .key.active { transform: scale(1.03); box-shadow: 0 0 16px var(--accent); }
+  .key.active.pressed { transform: scale(0.93); }
+  .key.active::after { border-color: #fff; border-width: calc(var(--border) * 1.4); opacity: 1; }
+  .key.active img { filter: brightness(0.95) saturate(0.9); }
+  .key.active.video .progress { display: block; }
+
+  /* Output: the "screen" the clip plays on, below the header */
+  #stage {
+    position: fixed; left: 0; right: 0; bottom: 0; top: var(--header-h); z-index: 10;
+    background: #000; display: none; cursor: pointer;
+  }
+  #stage.on { display: block; }
+  #stage > * {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; visibility: hidden;
+  }
+  #stage > .shown { visibility: visible; }
+
+  #empty { padding: 40px 20px; color: rgb(255 255 255 / 0.5); font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">SAMPLER</div>
+  <div class="badge" id="badge"><span>PRÊT</span></div>
+  <div class="spacer"></div>
+  <div class="legend" id="legend"></div>
+  <button class="round" id="fullscreen" title="Plein écran" aria-label="Plein écran">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+  </button>
+</header>
+<main id="deck"></main>
+<div id="stage" aria-live="polite"></div>
+
+<script src="deck.js"></script>
+<script>
+"use strict";
+// Same colours, titles and order as Theme / Item.Group in the native app.
+const GROUPS = {
+  cinema:   ["Cinéma & séries", "rgb(255 158 26)"],
+  tv:       ["Télé & people",   "rgb(89 140 255)"],
+  politics: ["Politique",       "rgb(242 64 64)"],
+  trump:    ["Trump",           "rgb(255 128 191)"],
+  music:    ["Musique & DJ",    "rgb(64 230 115)"],
+  memes:    ["Memes",           "rgb(179 102 255)"],
+  myriam:   ["Myriam",          "rgb(250 217 64)"],
+  images:   ["Images",          "rgb(51 204 242)"],
+  other:    ["Autres",          "rgb(153 153 153)"],
+};
+const PHOTO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m21 16-5-5-8 8"/></svg>';
+const EYE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5C6.5 5 2.7 9.4 1.5 12c1.2 2.6 5 7 10.5 7s9.3-4.4 10.5-7C21.3 9.4 17.5 5 12 5Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/></svg>';
+
+const items = window.DECK || [];
+const deck = document.getElementById("deck");
+const stage = document.getElementById("stage");
+const badge = document.getElementById("badge");
+const legend = document.getElementById("legend");
+const keys = new Map();     // id -> key element
+const media = new Map();    // id -> <video>/<img> on the stage, created on first hover or play
+let activeID = null;
+let raf = 0;
+
+// ---- Build the deck
+
+for (const g of Object.keys(GROUPS)) {
+  if (!items.some(i => i.group === g)) continue;
+  const el = document.createElement("div");
+  el.style.setProperty("--accent", GROUPS[g][1]);
+  el.innerHTML = "<i></i>";
+  el.append(GROUPS[g][0]);
+  legend.append(el);
+}
+
+for (const item of items) {
+  const key = document.createElement("div");
+  key.className = "key " + item.kind;
+  key.title = item.label;
+  key.style.setProperty("--accent", (GROUPS[item.group] || GROUPS.other)[1]);
+  const img = new Image();
+  img.src = item.thumb;
+  img.alt = "";
+  img.decoding = "async";
+  img.loading = "lazy";
+  const title = document.createElement("div");
+  title.className = "title";
+  const span = document.createElement("span");
+  span.textContent = item.short;
+  title.append(span);
+  key.append(img, title);
+  if (item.kind === "image") {
+    const photo = document.createElement("div");
+    photo.className = "photo";
+    photo.innerHTML = PHOTO_ICON;
+    key.append(photo);
+  } else {
+    const bar = document.createElement("div");
+    bar.className = "progress";
+    bar.innerHTML = "<i></i>";
+    key.append(bar);
+  }
+
+  // Fires on press, not release, like the app.
+  key.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    key.classList.add("pressed");
+    trigger(item);
+  });
+  const release = () => key.classList.remove("pressed");
+  key.addEventListener("pointerup", release);
+  key.addEventListener("pointerleave", release);
+  key.addEventListener("pointercancel", release);
+  key.addEventListener("pointerenter", () => mediaFor(item));   // warm the clip up before the click
+  keys.set(item.id, key);
+  deck.append(key);
+}
+
+if (!items.length) deck.innerHTML = '<div id="empty">Aucun clip : lance <code>python3 tools/import.py</code>.</div>';
+
+// ---- Layout: the biggest square key that fits the whole deck in the window (KeyLayout in the app)
+
+const MIN = 88, MAX = 220, PAD = 16;
+
+function layout() {
+  const width = document.documentElement.clientWidth - 2 * PAD;
+  const height = window.innerHeight - document.querySelector("header").offsetHeight;
+  let size = MAX, spacing, columns;
+  while (true) {
+    spacing = Math.min(12, Math.max(6, Math.round(size * 0.07)));
+    columns = Math.max(1, Math.floor((width + spacing) / (size + spacing)));
+    const rows = Math.ceil(items.length / columns);
+    if (2 * PAD + rows * (size + spacing) - spacing <= height || size <= MIN) break;
+    size -= 2;
+  }
+  deck.style.gridTemplateColumns = `repeat(${columns}, ${size}px)`;
+  deck.style.gap = `${spacing}px`;
+  deck.style.setProperty("--size", `${size}px`);
+  deck.style.setProperty("--border", `${Math.max(3, size * 0.035)}px`);
+  for (const key of keys.values()) fitTitle(key.querySelector(".title span"), size);
+
+  // The legend only shows when it fits on the header line (ViewThatFits in the app).
+  legend.classList.remove("hidden");
+  const header = document.querySelector("header");
+  if (header.scrollWidth > header.clientWidth) legend.classList.add("hidden");
+}
+
+/** Title as big as the key allows (30 % of its side), shrunk only to fit long words or 3 lines. */
+function fitTitle(span, size) {
+  const box = span.parentElement;
+  const maxW = box.clientWidth - size * 0.16;
+  const maxH = box.clientHeight - size * 0.22;
+  let fs = size * 0.3;
+  const floor = fs * 0.2;
+  span.style.fontSize = fs + "px";
+  while (fs > floor && (span.scrollWidth > maxW + 0.5 || span.offsetHeight > maxH + 0.5 || lines(span, fs) > 3)) {
+    fs *= 0.94;
+    span.style.fontSize = fs + "px";
+  }
+}
+const lines = (span, fs) => Math.round(span.offsetHeight / (fs * 1.02));
+
+// ---- Playback
+
+function mediaFor(item) {
+  let el = media.get(item.id);
+  if (el) return el;
+  if (item.kind === "video") {
+    el = document.createElement("video");
+    el.src = item.src;
+    el.preload = "auto";
+    el.playsInline = true;
+    el.addEventListener("ended", () => { if (activeID === item.id) stop(); });
+  } else {
+    el = new Image();
+    el.src = item.src;
+    el.alt = item.label;
+  }
+  stage.append(el);
+  media.set(item.id, el);
+  return el;
+}
+
+function trigger(item) {
+  if (activeID === item.id) return stop();
+  stopCurrent();
+  const el = mediaFor(item);
+  activeID = item.id;
+  el.classList.add("shown");
+  stage.classList.add("on");
+  const key = keys.get(item.id);
+  key.classList.add("active");
+  if (item.kind === "image") key.querySelector(".photo").innerHTML = EYE_ICON;
+  badge.classList.add("live");
+  badge.firstElementChild.textContent = "EN DIRECT · " + item.label;
+  if (item.kind === "video") {
+    el.currentTime = 0;
+    el.play().catch(() => {});
+    const bar = key.querySelector(".progress i");
+    const tick = () => {
+      if (el.duration) bar.style.width = Math.min(100, (el.currentTime / el.duration) * 100) + "%";
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+}
+
+/** Pauses and rewinds the current item so it starts instantly next time. */
+function stopCurrent() {
+  if (!activeID) return;
+  cancelAnimationFrame(raf);
+  const el = media.get(activeID);
+  const key = keys.get(activeID);
+  if (el instanceof HTMLVideoElement) { el.pause(); el.currentTime = 0; }
+  el.classList.remove("shown");
+  key.classList.remove("active");
+  const bar = key.querySelector(".progress i");
+  if (bar) bar.style.width = "0";
+  const photo = key.querySelector(".photo");
+  if (photo) photo.innerHTML = PHOTO_ICON;
+  activeID = null;
+}
+
+function stop() {
+  stopCurrent();
+  stage.classList.remove("on");
+  badge.classList.remove("live");
+  badge.firstElementChild.textContent = "PRÊT";
+}
+
+stage.addEventListener("pointerdown", stop);
+document.addEventListener("keydown", e => { if (e.key === "Escape") stop(); });
+
+document.getElementById("fullscreen").addEventListener("click", () => {
+  const root = document.documentElement;
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (root.requestFullscreen) root.requestFullscreen().catch(() => {});
+  else if (root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+});
+
+let pending = 0;
+window.addEventListener("resize", () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(layout); });
+layout();
+document.fonts?.ready.then(layout);
+</script>
+</body>
+</html>
